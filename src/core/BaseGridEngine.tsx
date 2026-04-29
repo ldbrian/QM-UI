@@ -36,7 +36,7 @@ export const BaseGridEngine = <T extends any>({
 
   const [activeCoord, setActiveCoord] = useState<{row: number, col: number} | null>(null);
 
-  const getRowKey = useCallback((record: T, index: number) => {
+  const getRowKey = useCallback((record: T, _index: number) => {
     if (typeof rowKey === 'function') return rowKey(record);
     return String(record[rowKey]);
   }, [rowKey]);
