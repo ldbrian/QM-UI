@@ -1,5 +1,4 @@
 // src/pages/LandingPage.tsx
-import React from 'react';
 import { DataEntryGrid } from '../components/DataEntryGrid';
 
 export const LandingPage = () => {
