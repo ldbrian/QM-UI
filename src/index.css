@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* 隐藏默认的刺眼滚动条，换成柔和的 B 端风格 */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #fafafa; }
+  ::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #bfbfbf; }
+  
+  /* 去除所有输入框点击时的黑色默认发光边框 */
+  input, div[contenteditable] {
+    outline: none;
+  }
+}
