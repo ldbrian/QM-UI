@@ -1,7 +1,10 @@
 // src/pages/LandingPage.tsx
 import { DataEntryGrid } from '../components/DataEntryGrid';
+import { DataViewGrid } from '../components/DataViewGrid'; // 🔥 引入查询表
+import { useState } from 'react'; // 引入 useState
 
 export const LandingPage = () => {
+  const [activeTab, setActiveTab] = useState<'entry' | 'view'>('entry'); // 🔥 控制显示哪张表
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-neutral-800">
       
@@ -40,12 +43,28 @@ export const LandingPage = () => {
 
       {/* === 3. Live Demo === */}
       <section id="demo" className="max-w-6xl mx-auto px-4 pb-24">
-        <div className="bg-white p-2 rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-gray-100 relative">
-          <div className="absolute -top-4 left-6 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded shadow-sm transform -rotate-2 z-10">
-            Try navigating with Arrow Keys, or hit Simulate Scan!
+
+        {/* 🔥 极简主义的 Tab 切换栏 */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex bg-gray-100 rounded-lg p-1">
+            <button 
+              onClick={() => setActiveTab('entry')}
+              className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'entry' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              1. Data Entry Flow
+            </button>
+            <button 
+              onClick={() => setActiveTab('view')}
+              className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'view' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              2. Data View & Filtering
+            </button>
           </div>
+        </div>
+
+        <div className="bg-white p-2 rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-gray-100 relative">
           {/* Live Component */}
-          <DataEntryGrid />
+          {activeTab === 'entry' ? <DataEntryGrid /> : <DataViewGrid />}
         </div>
       </section>
 

@@ -138,20 +138,21 @@ export const DataEntryGrid = () => {
 
       <div className="flex justify-between items-center px-6 py-4 border-t border-neutral-divider bg-gray-50">
         <div className="flex items-center space-x-4">
-          <span className="text-sm text-neutral-text font-medium">{data.length} records scanned</span>
+          <span className="text-sm text-gray-500 font-medium">{data.length} records scanned</span>
+          
           {errorCount > 0 && (
             <button
               onClick={() => setIsDockActive(!isDockActive)}
               className={`
-                flex items-center space-x-1.5 px-3 py-1 border rounded-full text-xs font-bold transition-all cursor-pointer select-none
+                flex items-center space-x-1.5 px-3 py-1 border rounded-full text-xs font-bold transition-all shadow-sm cursor-pointer select-none
                 ${isDockActive 
-                  ? 'border-danger-border bg-danger-border text-white shadow-md scale-105' 
-                  : 'border-danger-border text-danger-border bg-danger-bg/20 hover:bg-danger-bg/40 animate-pulse'
+                  ? 'border-red-500 bg-red-500 text-white scale-105' 
+                  : 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'
                 }
               `}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${isDockActive ? 'bg-white' : 'bg-danger-border'}`}></span>
-              <span>{errorCount} Errors {isDockActive ? '(Click to Undock)' : '(Click to Dock & Fix)'}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isDockActive ? 'bg-white' : 'bg-red-500'}`}></span>
+              <span>{errorCount} Errors </span>
             </button>
           )}
         </div>
