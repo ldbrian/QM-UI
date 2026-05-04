@@ -1,14 +1,13 @@
 /**
- * @file [BaseGridEngine.tsx]
- * @author [QM-UI Team]
+ * @file QM-UI Component
+ * @version 1.0.0
+ * @author QM-UI Team
  * @license 
  * This source code is licensed under the QM-UI Commercial License.
- * You may use this code in commercial projects, but you may NOT redistribute,
- * resell, or publish the source code itself (e.g., as part of a UI library or open-source repository).
- * 
- * Copyright (c) 2026 [QM-UI]. All rights reserved.
- * 
- * For license details, visit: https://qm-ui.vercel.app/license
+ * You may use this code in commercial projects for yourself or your clients.
+ * You may NOT redistribute, resell, or publish the source code itself.
+ * * Copyright (c) 2026 QM-UI. All rights reserved.
+ * * For full license details, visit: [你的落地页域名/license]
  */
 
 import React, { useState, useCallback } from 'react';
