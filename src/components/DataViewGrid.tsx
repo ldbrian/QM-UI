@@ -1,3 +1,15 @@
+/**
+ * @file QM-UI Component
+ * @version 1.0.0
+ * @author QM-UI Team
+ * @license 
+ * This source code is licensed under the QM-UI Commercial License.
+ * You may use this code in commercial projects for yourself or your clients.
+ * You may NOT redistribute, resell, or publish the source code itself.
+ * * Copyright (c) 2026 QM-UI. All rights reserved.
+ * * For full license details, visit: https://qm-ui.vercel.app/license
+ */
+
 // src/components/DataViewGrid.tsx
 import { useState, useRef, useEffect } from 'react';
 import { BaseGridEngine, type GridColumn } from '../core/BaseGridEngine';

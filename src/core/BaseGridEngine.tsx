@@ -7,7 +7,7 @@
  * You may use this code in commercial projects for yourself or your clients.
  * You may NOT redistribute, resell, or publish the source code itself.
  * * Copyright (c) 2026 QM-UI. All rights reserved.
- * * For full license details, visit: [你的落地页域名/license]
+ * * For full license details, visit: https://qm-ui.vercel.app/license
  */
 
 import React, { useState, useCallback } from 'react';
