@@ -1,3 +1,16 @@
+/**
+ * @file [BaseGridEngine.tsx]
+ * @author [QM-UI Team]
+ * @license 
+ * This source code is licensed under the QM-UI Commercial License.
+ * You may use this code in commercial projects, but you may NOT redistribute,
+ * resell, or publish the source code itself (e.g., as part of a UI library or open-source repository).
+ * 
+ * Copyright (c) 2026 [QM-UI]. All rights reserved.
+ * 
+ * For license details, visit: https://qm-ui.vercel.app/license
+ */
+
 import React, { useState, useCallback } from 'react';
 
 export interface GridFeatures {
@@ -95,15 +108,33 @@ export const BaseGridEngine = <T extends any>({
           const isCrosshairActive = features.showCrosshair && activeCoord?.row === originalIndex && activeCoord?.col === colIndex;
           const isRowActive = features.showCrosshair && activeCoord?.row === originalIndex;
           const isColActive = features.showCrosshair && activeCoord?.col === colIndex;
-
-          // 处理物理冻结样式
           const isFixed = !!col.fixed;
+
+          // 🔥 核心：采用绝对优先级的状态机，拒绝 CSS 类名打架
+          let cellStateClasses = 'bg-transparent text-neutral-text'; 
+          
+          if (isCrosshairActive) {
+            // 绝对焦点：加粗蓝框，强蓝底，文字加粗深蓝，强制提升层级
+            cellStateClasses = '!bg-blue-100 ring-2 ring-inset ring-blue-600 z-20 font-bold !text-blue-900';
+          } else if (hasError) {
+            // 错误状态次优先
+            cellStateClasses = '!bg-red-50 border-2 !border-red-500 z-10';
+          } else if (isRowActive || isColActive) {
+            // 十字星轴线：强制浅蓝底覆盖灰色
+            cellStateClasses = '!bg-blue-50 z-10';
+          } else if (isFixed) {
+            // 冻结列必须有纯白底色，否则滚动时会穿透
+            cellStateClasses = 'bg-white text-gray-800';
+          } else if (col.editable === false || col.type === 'readonly') {
+            // 最底层的只读灰色
+            cellStateClasses = 'bg-gray-50/70 text-gray-500';
+          }
+
           const fixedStyles = isFixed ? {
             position: 'sticky' as const,
             [col.fixed!]: 0,
             zIndex: isCrosshairActive ? 25 : 15,
             boxShadow: col.fixed === 'left' ? '2px 0 5px -2px rgba(0,0,0,0.1)' : '-2px 0 5px -2px rgba(0,0,0,0.1)',
-            backgroundColor: 'inherit'
           } : {};
 
           return (
@@ -114,19 +145,11 @@ export const BaseGridEngine = <T extends any>({
               tabIndex={col.render ? -1 : 0}
               onFocusCapture={() => setActiveCoord({ row: originalIndex, col: colIndex })}
               onBlurCapture={() => setActiveCoord(null)}
-              className={`
-                border-r border-neutral-border px-3 truncate relative transition-all duration-75 outline-none bg-transparent
-                ${hasError ? 'border-2 border-danger-border bg-danger-bg/10 z-10' : ''}
-                ${isCrosshairActive ? 'ring-2 ring-primary-500 ring-inset bg-blue-50 z-20' : ''}
-                ${!isCrosshairActive && isRowActive ? 'bg-blue-50/60 shadow-[0_-1px_0_0_#e6f4ff,0_1px_0_0_#e6f4ff] z-10' : ''}
-                ${!isCrosshairActive && isColActive ? 'bg-blue-50/60 shadow-[-1px_0_0_0_#e6f4ff,1px_0_0_0_#e6f4ff] z-10' : ''}
-                ${(col.editable === false || col.type === 'readonly') && !isFixed && !isCrosshairActive && !isRowActive && !isColActive ? 'bg-gray-50/50 text-gray-600' : ''}
-                ${(col.editable === false || col.type === 'readonly') && isFixed ? 'text-gray-600' : ''}
-                ${(col.editable === false || col.type === 'readonly') && (isCrosshairActive || isRowActive || isColActive) ? 'text-gray-600' : ''}
-              `}
+              // 将计算出的 cellStateClasses 注入
+              className={`border-r border-neutral-border px-3 truncate relative outline-none ${cellStateClasses}`}
               style={{ textAlign: col.align || 'center', ...fixedStyles }}
             >
-              {hasError && <div className="absolute top-0 right-0 w-2 h-2 bg-danger-border rounded-full transform translate-x-1/2 -translate-y-1/2 shadow-sm animate-pulse"></div>}
+              {hasError && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full transform translate-x-1/2 -translate-y-1/2 shadow-sm"></div>}
               <div className="w-full h-full flex items-center justify-center">
                 {col.render ? col.render(record, originalIndex) : (record as any)[col.key] || '-'}
               </div>

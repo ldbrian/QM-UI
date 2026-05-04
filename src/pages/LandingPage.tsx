@@ -2,6 +2,7 @@
 import { DataEntryGrid } from '../components/DataEntryGrid';
 import { DataViewGrid } from '../components/DataViewGrid'; // 🔥 引入查询表
 import { useState } from 'react'; // 引入 useState
+import { Link } from 'react-router-dom';
 
 export const LandingPage = () => {
   const [activeTab, setActiveTab] = useState<'entry' | 'view'>('entry'); // 🔥 控制显示哪张表
@@ -179,8 +180,22 @@ export const LandingPage = () => {
       </section>
 
       {/* === Footer === */}
-      <footer className="py-12 text-center text-gray-400 text-sm border-t border-gray-200">
-        <p>© 2026 QM-UI. Crafted with Enterprise prejudices.</p>
+      {/* 在 LandingPage.tsx 的底部区域添加 */}
+      <footer className="bg-white border-t border-gray-100 py-12 mt-24">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-sm">
+          <div className="text-gray-500 mb-4 md:mb-0">
+            &copy; 2026 QM-UI. Built for high-frequency data entry.
+          </div>
+          <div className="flex space-x-6">
+            {/* 使用 Link 组件实现前端无刷新跳转 */}
+            <Link to="/license" className="text-gray-500 hover:text-gray-900 transition-colors">
+              License & Terms
+            </Link>
+            <a href="mailto:your-email@example.com" className="text-gray-500 hover:text-gray-900 transition-colors">
+              Contact Support
+            </a>
+          </div>
+        </div>
       </footer>
     </div>
   );
