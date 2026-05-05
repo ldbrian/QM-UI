@@ -1,11 +1,12 @@
 // src/pages/LandingPage.tsx
 import { DataEntryGrid } from '../components/DataEntryGrid';
-import { DataViewGrid } from '../components/DataViewGrid'; // 🔥 引入查询表
-import { useState } from 'react'; // 引入 useState
+import { DataViewGrid } from '../components/DataViewGrid'; 
+import { useState } from 'react'; 
 import { Link } from 'react-router-dom';
 
 export const LandingPage = () => {
-  const [activeTab, setActiveTab] = useState<'entry' | 'view'>('entry'); // 🔥 控制显示哪张表
+  const [activeTab, setActiveTab] = useState<'entry' | 'view'>('entry'); 
+  
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-neutral-800">
       
@@ -33,6 +34,7 @@ export const LandingPage = () => {
           A React table component built strictly for high-frequency data entry and internal tools. Featuring true 2D keyboard navigation, barcode scanner loops, and an anti-error Dock system. Not a bloated Swiss Army knife—a drop-in V8 engine.
         </p>
         <div className="flex justify-center space-x-4 flex-col sm:flex-row gap-4 sm:gap-0">
+          {/* 这里保留锚点跳转，引导用户看完整页价值 */}
           <a href="#pricing" className="bg-gray-900 text-white px-8 py-3.5 rounded-lg font-bold hover:bg-gray-800 transition-colors shadow-lg transform hover:-translate-y-0.5">
             Get Founding Member License - $39.00
           </a>
@@ -44,8 +46,6 @@ export const LandingPage = () => {
 
       {/* === 3. Live Demo === */}
       <section id="demo" className="max-w-6xl mx-auto px-4 pb-24">
-
-        {/* 🔥 极简主义的 Tab 切换栏 */}
         <div className="flex justify-center mb-8">
           <div className="inline-flex bg-gray-100 rounded-lg p-1">
             <button 
@@ -64,7 +64,6 @@ export const LandingPage = () => {
         </div>
 
         <div className="bg-white p-2 rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-gray-100 relative">
-          {/* Live Component */}
           {activeTab === 'entry' ? <DataEntryGrid /> : <DataViewGrid />}
         </div>
       </section>
@@ -171,27 +170,29 @@ export const LandingPage = () => {
               </li>
             </ul>
 
-            <button className="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-xl text-lg transition-colors shadow-[0_0_20px_rgba(22,119,255,0.4)]">
+            {/* 🔥 替换为 Lemon Squeezy Checkout 链接 */}
+            <a 
+              href="https://dongstudio.lemonsqueezy.com/checkout/buy/65749a12-9d60-4e48-a5c9-0ed7beb67d18"
+              className="block w-full text-center bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-xl text-lg transition-colors shadow-[0_0_20px_rgba(22,119,255,0.4)]"
+            >
               Pay Now & Lock Early Bird Access
-            </button>
+            </a>
             <p className="text-gray-400 text-xs mt-4 text-center">Secure payment by Stripe. By purchasing, you agree to the License Agreement.</p>
           </div>
         </div>
       </section>
 
       {/* === Footer === */}
-      {/* 在 LandingPage.tsx 的底部区域添加 */}
       <footer className="bg-white border-t border-gray-100 py-12 mt-24">
         <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-sm">
           <div className="text-gray-500 mb-4 md:mb-0">
             &copy; 2026 QM-UI. Built for high-frequency data entry.
           </div>
           <div className="flex space-x-6">
-            {/* 使用 Link 组件实现前端无刷新跳转 */}
             <Link to="/license" className="text-gray-500 hover:text-gray-900 transition-colors">
               License & Terms
             </Link>
-            <a href="mailto:your-email@example.com" className="text-gray-500 hover:text-gray-900 transition-colors">
+            <a href="mailto:ldbrian2262@gmail.com" className="text-gray-500 hover:text-gray-900 transition-colors">
               Contact Support
             </a>
           </div>

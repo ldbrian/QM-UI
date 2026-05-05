@@ -1,73 +1,65 @@
-# React + TypeScript + Vite
+# QM-UI V1.0 - High-Speed B2B Grid Components
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to QM-UI, the React grid system engineered specifically for high-frequency data entry and complex B2B workflows (WMS, ERP, SaaS).
 
-Currently, two official plugins are available:
+This package contains the raw, customizable source code. It is not an npm package; you own the code and can modify it to fit your exact business logic.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 📦 What's Included
 
-## React Compiler
+*   `src/core/BaseGridEngine.tsx` - The underlying coordinate and docking engine.
+*   `src/components/DataEntryGrid.tsx` - The high-speed, 2D-keyboard navigation entry template.
+*   `src/components/DataViewGrid.tsx` - The inventory dashboard template with selection and status docking.
+*   `tailwind.config.js` - Essential color palette and spacing configurations.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Prerequisites
 
-## Expanding the ESLint configuration
+Ensure your React project has the following installed:
+1.  **React 18+**
+2.  **Tailwind CSS** (for styling)
+3.  **Lucide React** (Optional, if you use our default icons)
+    ```bash
+    npm install lucide-react
+    ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🚀 Quick Integration Guide
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+**Step 1: Copy the Source Code**
+Copy the `core` and `components` folders from this package into your project's `src` directory (e.g., `src/qm-ui/core`, `src/qm-ui/components`).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+**Step 2: Merge Tailwind Configuration**
+Open our provided `tailwind.config.js` and merge the `theme.extend.colors` (like primary, neutral, danger) into your project's existing `tailwind.config.js` or `tailwind.config.ts`. Without this, the grid will lack proper styling.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Step 3: Import and Render**
+Import the templates directly into your views:
+
+```tsx
+import { DataEntryGrid } from './qm-ui/components/DataEntryGrid';
+import { DataViewGrid } from './qm-ui/components/DataViewGrid';
+
+function App() {
+  return (
+    <div className="p-8">
+      
+      <DataEntryGrid/>
+      
+      
+      <DataViewGrid/>
+    </div>
+  );
+}
+
+export default App;
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## ⚖️ License & Terms
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+This source code is provided under the **QM-UI Single Developer Commercial License**.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+*   **You MAY:** Use this code in unlimited commercial end-products for yourself or your clients. Modify the code as needed.
+*   **You MAY NOT:** Redistribute, resell, or publish this source code publicly (e.g., as part of an open-source library, a paid UI kit, or a public GitHub repository).
+
+All sales are final. For full license details, please refer to the `LICENSE.md` file included in this package or visit our official website.
+
+## 💬 Support
+
+If you encounter any critical bugs within the core engine, please contact us at: ldbrian2262@gmail.com
