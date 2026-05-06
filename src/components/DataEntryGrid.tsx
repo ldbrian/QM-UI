@@ -4,7 +4,7 @@
  * @author QM-UI Team
  */
 
-import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BaseGridEngine, type GridColumn } from '../core/BaseGridEngine';
 
 interface InventoryRecord {
@@ -196,7 +196,7 @@ export const DataEntryGrid = () => {
     title,
     width,
     align,
-    render: (record, rowIndex, colIndex, isActive) => {
+    render: (record, rowIndex, _colIndex, isActive) => {
       const errorKey = `${rowIndex}-${key as string}`;
       const isJustScanned = record.id === lastScannedId && key === 'qty'; 
 
