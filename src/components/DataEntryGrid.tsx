@@ -2,16 +2,9 @@
  * @file QM-UI Component
  * @version 1.0.0
  * @author QM-UI Team
- * @license 
- * This source code is licensed under the QM-UI Commercial License.
- * You may use this code in commercial projects for yourself or your clients.
- * You may NOT redistribute, resell, or publish the source code itself.
- * * Copyright (c) 2026 QM-UI. All rights reserved.
- * * For full license details, visit: https://qm-ui.vercel.app/license
  */
 
-// src/components/DataEntryGrid.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import { BaseGridEngine, type GridColumn } from '../core/BaseGridEngine';
 
 interface InventoryRecord {
@@ -19,7 +12,104 @@ interface InventoryRecord {
   code: string;
   name: string;
   qty: number | string;
+  [key: string]: any; 
 }
+
+const EditableCell = ({
+  value,
+  hasError,
+  isJustScanned,
+  isActive, // 接收引擎传来的焦点状态
+  onChange,
+  onValidate
+}: {
+  value: any;
+  hasError: boolean;
+  isJustScanned: boolean;
+  isActive: boolean;
+  onChange: (val: string) => void;
+  onValidate: (val: string) => string | null;
+}) => {
+  const [editMode, setEditMode] = useState<'none' | 'quick' | 'deep'>(isJustScanned ? 'deep' : 'none');
+  const [localValue, setLocalValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cellRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  // 核心修复：处理真实的 DOM 焦点夺取
+  useEffect(() => {
+    if (editMode !== 'none' && inputRef.current) {
+      inputRef.current.focus();
+      if (isJustScanned) inputRef.current.select();
+    } else if (editMode === 'none' && isActive && cellRef.current) {
+      // 只有在 editMode 为 none 且被引擎标为 isActive 时，才夺取焦点
+      cellRef.current.focus();
+    }
+  }, [editMode, isJustScanned, isActive]);
+
+  const handleSave = () => {
+    setEditMode('none');
+    onChange(localValue);
+    onValidate(localValue);
+  };
+
+  const handleCellKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (editMode !== 'none') return;
+    
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      setEditMode('deep'); 
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      setLocalValue(e.key);
+      setEditMode('quick');
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setEditMode('none');
+      setLocalValue(value); 
+      e.stopPropagation();
+    } else if (e.key.startsWith('Arrow')) {
+      if (editMode === 'deep') {
+        e.stopPropagation();
+      } else if (editMode === 'quick') {
+        handleSave(); 
+      }
+    }
+  };
+
+  if (editMode !== 'none') {
+    return (
+      <input
+        ref={inputRef}
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onKeyDown={handleInputKeyDown}
+        onBlur={handleSave}
+        className={`w-full h-full bg-blue-50 text-neutral-title text-center focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${hasError ? 'text-danger-500 font-bold' : ''}`}
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={cellRef}
+      tabIndex={-1}
+      onDoubleClick={() => setEditMode('deep')} 
+      onKeyDown={handleCellKeyDown}
+      className={`w-full h-full flex items-center justify-center cursor-text transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-blue-50/50 ${hasError ? 'text-danger-500 font-bold underline decoration-wavy' : 'text-neutral-title'}`}
+    >
+      {value}
+    </div>
+  );
+};
 
 export const DataEntryGrid = () => {
   const [data, setData] = useState<InventoryRecord[]>([
@@ -79,47 +169,55 @@ export const DataEntryGrid = () => {
     setLastScannedId(newId);
   };
 
-  const columns: GridColumn<InventoryRecord>[] = [
-    { key: 'id', title: 'Row ID', width: '100px', type: 'readonly' },
-    { key: 'code', title: 'Item Code', width: '200px', align: 'left', type: 'readonly' },
-    { key: 'name', title: 'Item Name', align: 'left', type: 'readonly' },
-    {
-      key: 'qty',
-      title: 'Qty (Editable)',
-      width: '150px',
-      render: (record, rowIndex) => {
-        const errorKey = `${rowIndex}-qty`;
-        const hasError = !!errors[errorKey];
-        const isJustScanned = record.id === lastScannedId;
+  const handleCellChange = (rowIndex: number, field: keyof InventoryRecord, newValue: string) => {
+    const newData = [...data];
+    newData[rowIndex] = { ...newData[rowIndex], [field]: newValue };
+    setData(newData);
+  };
 
-        return (
-          <input
-            autoFocus={isJustScanned}
-            onFocus={(e) => e.target.select()}
-            className={`
-              w-full h-full bg-transparent text-center focus:outline-none focus:font-bold transition-all
-              ${hasError ? 'text-danger-border font-bold' : 'text-neutral-title'}
-            `}
-            value={record.qty}
-            onChange={(e) => {
-              const newData = [...data];
-              newData[rowIndex].qty = e.target.value;
-              setData(newData);
-            }}
-            onBlur={(e) => {
-              const val = e.target.value;
-              const newErrors = { ...errors };
-              if (isNaN(Number(val)) || val.trim() === '') {
-                newErrors[errorKey] = 'Must be a number';
-              } else {
-                delete newErrors[errorKey];
-              }
-              setErrors(newErrors);
-            }}
-          />
-        );
-      }
-    },
+  const handleValidate = (rowIndex: number, field: keyof InventoryRecord, value: string) => {
+    const errorKey = `${rowIndex}-${field as string}`;
+    const newErrors = { ...errors };
+
+    if (field === 'qty' && (isNaN(Number(value)) || String(value).trim() === '')) {
+      newErrors[errorKey] = 'Must be a number';
+    } else if (String(value).trim() === '') {
+      newErrors[errorKey] = 'Cannot be empty';
+    } else {
+      delete newErrors[errorKey];
+    }
+    setErrors(newErrors);
+    return newErrors[errorKey] || null;
+  };
+
+  // 核心修复：接收并派发 isActive[cite: 2]
+  const generateEditableColumn = (key: keyof InventoryRecord, title: string, width?: string, align?: 'left' | 'center' | 'right'): GridColumn<InventoryRecord> => ({
+    key: key as string,
+    title,
+    width,
+    align,
+    render: (record, rowIndex, colIndex, isActive) => {
+      const errorKey = `${rowIndex}-${key as string}`;
+      const isJustScanned = record.id === lastScannedId && key === 'qty'; 
+
+      return (
+        <EditableCell
+          value={record[key]}
+          hasError={!!errors[errorKey]}
+          isJustScanned={isJustScanned}
+          isActive={isActive} // 关键传递点
+          onChange={(val) => handleCellChange(rowIndex, key, val)}
+          onValidate={(val) => handleValidate(rowIndex, key, val)}
+        />
+      );
+    }
+  });
+
+  const columns: GridColumn<InventoryRecord>[] = [
+    generateEditableColumn('id', 'Row ID', '100px'),
+    generateEditableColumn('code', 'Item Code', '200px', 'left'),
+    generateEditableColumn('name', 'Item Name', 'auto', 'left'),
+    generateEditableColumn('qty', 'Qty', '150px'),
   ];
 
   return (
@@ -127,11 +225,11 @@ export const DataEntryGrid = () => {
       <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-divider bg-gray-50">
         <div>
           <h2 className="text-lg font-bold text-neutral-title">High-Speed Entry Grid</h2>
-          <p className="text-xs text-neutral-muted mt-1">Try clicking read-only cells and use Tab/Arrow keys to navigate.</p>
+          <p className="text-xs text-neutral-muted mt-1">Navigate with Arrow keys. Press Enter to edit. Esc to cancel.</p>
         </div>
         <button 
           onClick={handleSimulateScan}
-          className="px-4 py-2 bg-gray-800 text-white rounded text-sm font-medium hover:bg-gray-700 transition-colors shadow-sm flex items-center gap-2"
+          className="px-4 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 transition-colors shadow-sm flex items-center gap-2"
         >
           Simulate Scan
         </button>
