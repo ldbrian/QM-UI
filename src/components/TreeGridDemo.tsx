@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BaseGridEngine, type GridColumn, type CellContext } from '../core/BaseGridEngine';
 import type { RawTreeNode } from '../core/treeEngine';
 
@@ -123,7 +123,7 @@ export const TreeGridDemo = () => {
       title: 'Sel',
       width: '50px',
       align: 'center',
-      render: (record: any, ctx: CellContext) => (
+      render: (_record: any, ctx: CellContext) => (
         <IndeterminateCheckbox 
           checked={ctx.isSelected}
           indeterminate={ctx.isIndeterminate} // FSM 引擎自动计算的半选状态
