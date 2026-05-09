@@ -1,11 +1,10 @@
 /**
  * @file QM-UI Component
- * @version 1.0.0
- * @author QM-UI Team
+ * @version 2.0.0 (V2 Engine Adapted)
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { BaseGridEngine, type GridColumn } from '../core/BaseGridEngine';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { BaseGridEngine, type GridColumn, type CellContext } from '../core/BaseGridEngine';
 
 interface InventoryRecord {
   id: string;
@@ -19,14 +18,14 @@ const EditableCell = ({
   value,
   hasError,
   isJustScanned,
-  isActive, // 接收引擎传来的焦点状态
+  ctx,
   onChange,
   onValidate
 }: {
   value: any;
   hasError: boolean;
   isJustScanned: boolean;
-  isActive: boolean;
+  ctx: CellContext;
   onChange: (val: string) => void;
   onValidate: (val: string) => string | null;
 }) => {
@@ -39,16 +38,15 @@ const EditableCell = ({
     setLocalValue(value);
   }, [value]);
 
-  // 核心修复：处理真实的 DOM 焦点夺取
+  // V2 引擎焦点夺取
   useEffect(() => {
     if (editMode !== 'none' && inputRef.current) {
       inputRef.current.focus();
       if (isJustScanned) inputRef.current.select();
-    } else if (editMode === 'none' && isActive && cellRef.current) {
-      // 只有在 editMode 为 none 且被引擎标为 isActive 时，才夺取焦点
+    } else if (editMode === 'none' && ctx.isActive && cellRef.current) {
       cellRef.current.focus();
     }
-  }, [editMode, isJustScanned, isActive]);
+  }, [editMode, isJustScanned, ctx.isActive]);
 
   const handleSave = () => {
     setEditMode('none');
@@ -58,7 +56,6 @@ const EditableCell = ({
 
   const handleCellKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (editMode !== 'none') return;
-    
     if (e.key === 'Enter') {
       e.preventDefault();
       setEditMode('deep'); 
@@ -77,11 +74,8 @@ const EditableCell = ({
       setLocalValue(value); 
       e.stopPropagation();
     } else if (e.key.startsWith('Arrow')) {
-      if (editMode === 'deep') {
-        e.stopPropagation();
-      } else if (editMode === 'quick') {
-        handleSave(); 
-      }
+      if (editMode === 'deep') e.stopPropagation();
+      else if (editMode === 'quick') handleSave(); 
     }
   };
 
@@ -93,7 +87,8 @@ const EditableCell = ({
         onChange={(e) => setLocalValue(e.target.value)}
         onKeyDown={handleInputKeyDown}
         onBlur={handleSave}
-        className={`w-full h-full bg-blue-50 text-neutral-title text-center focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${hasError ? 'text-danger-500 font-bold' : ''}`}
+        className={`absolute inset-0 w-full h-full px-4 bg-blue-50 text-neutral-900 font-bold focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 transition-all ${hasError ? 'text-red-600' : ''}`}
+        style={{ textAlign: 'center' }}
       />
     );
   }
@@ -104,7 +99,7 @@ const EditableCell = ({
       tabIndex={-1}
       onDoubleClick={() => setEditMode('deep')} 
       onKeyDown={handleCellKeyDown}
-      className={`w-full h-full flex items-center justify-center cursor-text transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-blue-50/50 ${hasError ? 'text-danger-500 font-bold underline decoration-wavy' : 'text-neutral-title'}`}
+      className={`w-full truncate cursor-text focus:outline-none ${hasError ? 'text-red-500 font-bold underline decoration-wavy' : 'text-gray-800'}`}
     >
       {value}
     </div>
@@ -120,7 +115,7 @@ export const DataEntryGrid = () => {
   ]);
 
   const [errors, setErrors] = useState<Record<string, string>>({
-    '2-qty': 'Must be a number' 
+    'R003-qty': 'Must be a number' 
   });
 
   const [lastScannedId, setLastScannedId] = useState<string | null>(null);
@@ -130,53 +125,39 @@ export const DataEntryGrid = () => {
   const errorCount = Object.keys(errors).length;
   const isReadyToSubmit = errorCount === 0;
 
-  const dockedRowKeys = isDockActive 
-    ? Object.keys(errors).map(key => {
-        const rowIndex = key.split('-')[0];
-        return data[Number(rowIndex)]?.id;
-      }).filter(Boolean)
-    : [];
+  // 🔥 V2 架构：业务层接管吸底逻辑 (将报错的行重新排序到数组末尾)
+  const displayData = useMemo(() => {
+    if (!isDockActive) return data;
+    const errorIds = Object.keys(errors).map(k => k.split('-')[0]);
+    const normalRows = data.filter(d => !errorIds.includes(d.id));
+    const dockedRows = data.filter(d => errorIds.includes(d.id));
+    return [...normalRows, ...dockedRows];
+  }, [data, errors, isDockActive]);
 
   useEffect(() => {
     if (isDockActive && errorCount > 0) {
       setTimeout(() => {
         const scrollContainer = gridContainerRef.current?.querySelector('.overflow-auto');
         if (scrollContainer) {
-          scrollContainer.scrollTo({
-            top: scrollContainer.scrollHeight,
-            behavior: 'smooth'
-          });
+          scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
         }
       }, 0);
     }
+    if (errorCount === 0 && isDockActive) setIsDockActive(false);
   }, [isDockActive, errorCount]);
-
-  useEffect(() => {
-    if (errorCount === 0 && isDockActive) {
-      setIsDockActive(false);
-    }
-  }, [errorCount, isDockActive]);
 
   const handleSimulateScan = () => {
     const newId = `R00${data.length + 1}`;
-    const newRecord: InventoryRecord = {
-      id: newId,
-      code: `WE-00${data.length + 1}`,
-      name: 'Scanned Item',
-      qty: 1, 
-    };
-    setData([...data, newRecord]);
+    setData([...data, { id: newId, code: `WE-00${data.length + 1}`, name: 'Scanned Item', qty: 1 }]);
     setLastScannedId(newId);
   };
 
-  const handleCellChange = (rowIndex: number, field: keyof InventoryRecord, newValue: string) => {
-    const newData = [...data];
-    newData[rowIndex] = { ...newData[rowIndex], [field]: newValue };
-    setData(newData);
+  const handleCellChange = (id: string, field: keyof InventoryRecord, newValue: string) => {
+    setData(prev => prev.map(row => row.id === id ? { ...row, [field]: newValue } : row));
   };
 
-  const handleValidate = (rowIndex: number, field: keyof InventoryRecord, value: string) => {
-    const errorKey = `${rowIndex}-${field as string}`;
+  const handleValidate = (id: string, field: keyof InventoryRecord, value: string) => {
+    const errorKey = `${id}-${field as string}`;
     const newErrors = { ...errors };
 
     if (field === 'qty' && (isNaN(Number(value)) || String(value).trim() === '')) {
@@ -190,42 +171,36 @@ export const DataEntryGrid = () => {
     return newErrors[errorKey] || null;
   };
 
-  // 核心修复：接收并派发 isActive[cite: 2]
   const generateEditableColumn = (key: keyof InventoryRecord, title: string, width?: string, align?: 'left' | 'center' | 'right'): GridColumn<InventoryRecord> => ({
-    key: key as string,
-    title,
-    width,
-    align,
-    render: (record, rowIndex, _colIndex, isActive) => {
-      const errorKey = `${rowIndex}-${key as string}`;
-      const isJustScanned = record.id === lastScannedId && key === 'qty'; 
-
+    key: key as string, title, width, align,
+    render: (record, ctx) => {
+      const errorKey = `${record.id}-${key as string}`;
       return (
         <EditableCell
           value={record[key]}
           hasError={!!errors[errorKey]}
-          isJustScanned={isJustScanned}
-          isActive={isActive} // 关键传递点
-          onChange={(val) => handleCellChange(rowIndex, key, val)}
-          onValidate={(val) => handleValidate(rowIndex, key, val)}
+          isJustScanned={record.id === lastScannedId && key === 'qty'}
+          ctx={ctx}
+          onChange={(val) => handleCellChange(record.id, key, val)}
+          onValidate={(val) => handleValidate(record.id, key, val)}
         />
       );
     }
   });
 
   const columns: GridColumn<InventoryRecord>[] = [
-    generateEditableColumn('id', 'Row ID', '100px'),
+    generateEditableColumn('id', 'Row ID', '100px', 'center'),
     generateEditableColumn('code', 'Item Code', '200px', 'left'),
     generateEditableColumn('name', 'Item Name', 'auto', 'left'),
-    generateEditableColumn('qty', 'Qty', '150px'),
+    generateEditableColumn('qty', 'Qty', '150px', 'center'),
   ];
 
   return (
-    <div className="bg-white shadow-xl flex flex-col h-[600px] rounded-lg overflow-hidden border border-neutral-divider text-left">
-      <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-divider bg-gray-50">
+    <div className="bg-white shadow-xl flex flex-col h-[600px] rounded-lg overflow-hidden border border-gray-200 text-left relative font-sans">
+      <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gray-50 shrink-0">
         <div>
-          <h2 className="text-lg font-bold text-neutral-title">High-Speed Entry Grid</h2>
-          <p className="text-xs text-neutral-muted mt-1">Navigate with Arrow keys. Press Enter to edit. Esc to cancel.</p>
+          <h2 className="text-lg font-bold text-gray-900">High-Speed Entry Grid</h2>
+          <p className="text-xs text-gray-500 mt-1">Navigate with Arrow keys. Press Enter to edit. Esc to cancel.</p>
         </div>
         <button 
           onClick={handleSimulateScan}
@@ -235,45 +210,26 @@ export const DataEntryGrid = () => {
         </button>
       </div>
 
-      <div className="flex-1 relative bg-white overflow-hidden p-6" ref={gridContainerRef}>
-        <BaseGridEngine
-          data={data}
-          columns={columns}
-          rowKey="id"
-          errors={errors}
-          dockedRowKeys={dockedRowKeys} 
-          features={{ showCrosshair: true, enableDock: true, enableKeyboardNav: true }}
-        />
+      <div className="flex-1 relative overflow-hidden" ref={gridContainerRef}>
+        <BaseGridEngine mode="entry" data={displayData} columns={columns} rowKey="id" />
       </div>
 
-      <div className="flex justify-between items-center px-6 py-4 border-t border-neutral-divider bg-gray-50">
+      <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50 shrink-0">
         <div className="flex items-center space-x-4">
           <span className="text-sm text-gray-500 font-medium">{data.length} records scanned</span>
-          
           {errorCount > 0 && (
             <button
               onClick={() => setIsDockActive(!isDockActive)}
-              className={`
-                flex items-center space-x-1.5 px-3 py-1 border rounded-full text-xs font-bold transition-all shadow-sm cursor-pointer select-none
-                ${isDockActive 
-                  ? 'border-red-500 bg-red-500 text-white scale-105' 
-                  : 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'
-                }
-              `}
+              className={`flex items-center space-x-1.5 px-3 py-1 border rounded-full text-xs font-bold transition-all shadow-sm select-none ${isDockActive ? 'border-red-500 bg-red-500 text-white scale-105' : 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${isDockActive ? 'bg-white' : 'bg-red-500'}`}></span>
-              <span>{errorCount} Errors </span>
+              <span>{errorCount} Errors Docked</span>
             </button>
           )}
         </div>
-
         <button
           disabled={!isReadyToSubmit}
-          className={`px-8 py-2.5 rounded text-sm font-medium transition-all duration-300 ${
-            isReadyToSubmit
-              ? 'bg-primary-500 text-white hover:bg-primary-600 shadow-md cursor-pointer transform hover:-translate-y-0.5'
-              : 'bg-gray-200 text-neutral-muted cursor-not-allowed opacity-70'
-          }`}
+          className={`px-8 py-2.5 rounded text-sm font-medium transition-all duration-300 ${isReadyToSubmit ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md transform hover:-translate-y-0.5' : 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'}`}
         >
           Submit Batch
         </button>

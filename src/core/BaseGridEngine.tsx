@@ -1,201 +1,189 @@
-/**
- * @file QM-UI Component
- * @version 1.0.0
- * @author QM-UI Team
- */
+// src/core/BaseGridEngine.tsx
+import React, { useState, useRef, useMemo } from 'react';
+import { useTreeGrid } from './useTreeGrid'; 
+import { GridRenderEngine } from './GridRenderEngine';
 
-import React, { useState, useCallback } from 'react';
+export type GridMode = 'view' | 'entry' | 'action' | 'tree';
 
-export interface GridFeatures {
-  showCrosshair?: boolean; 
-  enableDock?: boolean;    
-  enableKeyboardNav?: boolean; 
+export interface CellContext {
+  rowIndex: number;
+  colIndex: number;
+  isActive: boolean;
+  isSelected: boolean;
+  isIndeterminate?: boolean; // 🔥 新增：半选状态
+  mode: GridMode;
+  toggleSelect: () => void;
+  toggleExpand: () => void;
 }
 
 export interface GridColumn<T> {
   key: string;
   title: string;
-  width?: string | number;
+  width?: string;
   align?: 'left' | 'center' | 'right';
-  type?: 'text' | 'number' | 'readonly'; 
-  editable?: boolean;
-  fixed?: 'left' | 'right';
-  render?: (record: T, rowIndex: number, colIndex: number, isActive: boolean) => React.ReactNode; 
+  render: (record: T, context: CellContext) => React.ReactNode;
 }
 
-export interface BaseGridProps<T = any> {
-  columns: GridColumn<T>[];
+export interface BaseGridProps<T> {
+  mode?: GridMode; 
   data: T[];
-  rowKey: keyof T | ((record: T) => string); 
-  errors?: Record<string, string>; 
-  dockedRowKeys?: string[]; 
-  features?: GridFeatures;  
+  columns: GridColumn<T>[];
+  rowKey: string;
+  onRowSelect?: (selectedKeys: string[]) => void;
+  onTreeDrop?: (draggedId: string, targetId: string, position: 'before' | 'inside' | 'after') => void; 
 }
 
-export const BaseGridEngine = <T extends any>({ 
-  columns, 
-  data, 
-  rowKey,
-  errors = {},
-  dockedRowKeys = [],
-  features = { showCrosshair: false, enableDock: false, enableKeyboardNav: true }
-}: BaseGridProps<T>) => {
-
-  const [activeCoord, setActiveCoord] = useState<{row: number, col: number} | null>(null);
-
-  const getRowKey = useCallback((record: T, _index: number) => {
-    if (typeof rowKey === 'function') return rowKey(record);
-    return String(record[rowKey]);
-  }, [rowKey]);
-
-  const normalData = features.enableDock 
-    ? data.filter((r, i) => !dockedRowKeys.includes(getRowKey(r, i)))
-    : data;
+export function BaseGridEngine<T extends Record<string, any>>({
+  mode = 'view', data, columns, rowKey, onRowSelect, onTreeDrop
+}: BaseGridProps<T>) {
   
-  const dockedData = features.enableDock
-    ? data.filter((r, i) => dockedRowKeys.includes(getRowKey(r, i)))
-    : [];
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!features.enableKeyboardNav || !activeCoord) return;
-
-    const { row, col } = activeCoord;
-    let nextRow = row;
-    let nextCol = col;
-    const isInput = (e.target as HTMLElement).tagName === 'INPUT';
-
-    switch (e.key) {
-      case 'ArrowUp': nextRow = row - 1; e.preventDefault(); break;
-      case 'ArrowDown':
-      case 'Enter': nextRow = row + 1; e.preventDefault(); break;
-      case 'ArrowLeft': if (isInput) return; nextCol = col - 1; e.preventDefault(); break;
-      case 'ArrowRight': if (isInput) return; nextCol = col + 1; e.preventDefault(); break;
-      default: return;
+  const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
+  const isTreeMode = mode === 'tree';
+  const { visibleNodes, toggleNode } = useTreeGrid(isTreeMode ? (data as any) : [], isTreeMode);
+  
+  const renderList = useMemo(() => {
+    if (isTreeMode) {
+      return visibleNodes.map(node => ({
+        ...node.raw,
+        _isExpanded: node._isExpanded,
+        _hasChildren: node._hasChildren,
+        _depth: node._depth,
+        _originalId: node.id
+      })) as unknown as T[];
     }
+    return data;
+  }, [isTreeMode, visibleNodes, data]);
 
-    if (nextRow < 0 || nextRow >= data.length || nextCol < 0 || nextCol >= columns.length) return;
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
-    const nextCell = document.querySelector(`td[data-row="${nextRow}"][data-col="${nextCol}"]`) as HTMLElement;
-    if (nextCell) {
-      const focusableInput = nextCell.querySelector('input, button, select') as HTMLElement;
-      if (focusableInput) {
-        focusableInput.focus();
-        if (focusableInput.tagName === 'INPUT') (focusableInput as HTMLInputElement).select();
-      } else {
-        nextCell.focus();
+  // 🔥 辅助：计算半选状态 (Indeterminate)
+  const getSelectionState = (record: any) => {
+    const id = String(record[rowKey] || record._originalId);
+    const isSelected = selectedKeys.includes(id);
+    if (!isTreeMode || !record.children) return { isSelected, isIndeterminate: false };
+
+    const collectAllLeafIds = (node: any): string[] => {
+      let ids = [String(node.id || node[rowKey])];
+      if (node.children) {
+        node.children.forEach((c: any) => { ids = [...ids, ...collectAllLeafIds(c)]; });
       }
+      return ids;
+    };
+
+    const allChildIds = collectAllLeafIds(record).filter(kid => kid !== id);
+    if (allChildIds.length === 0) return { isSelected, isIndeterminate: false };
+
+    const selectedChildren = allChildIds.filter(kid => selectedKeys.includes(kid));
+    const isIndeterminate = selectedChildren.length > 0 && selectedChildren.length < allChildIds.length;
+    
+    return { isSelected: isSelected || selectedChildren.length === allChildIds.length, isIndeterminate };
+  };
+  
+  const handleSelectToggle = (id: string) => {
+    let newSelected = [...selectedKeys];
+    if (isTreeMode) {
+      const collectIds = (nodes: any[], targetId: string): string[] => {
+        for (const n of nodes) {
+          if (String(n.id) === targetId) {
+            const getSubIds = (node: any): string[] => [String(node.id || node[rowKey]), ...(node.children?.flatMap(getSubIds) || [])];
+            return getSubIds(n);
+          }
+          const found = n.children ? collectIds(n.children, targetId) : [];
+          if (found.length > 0) return found;
+        }
+        return [];
+      };
+      const affected = collectIds(data, id);
+      const isCurrentlySelected = selectedKeys.includes(id);
+      newSelected = !isCurrentlySelected 
+        ? Array.from(new Set([...selectedKeys, ...affected]))
+        : selectedKeys.filter(k => !affected.includes(k));
+    } else {
+      newSelected = selectedKeys.includes(id) ? selectedKeys.filter(k => k !== id) : [...selectedKeys, id];
     }
+    setSelectedKeys(newSelected);
+    onRowSelect?.(newSelected);
   };
 
-  const renderRow = (record: T, originalIndex: number, isDocked: boolean = false) => {
-    const currentKey = getRowKey(record, originalIndex);
-    
-    return (
-      <tr 
-        key={currentKey} 
-        className={`border-b border-neutral-border h-10 transition-colors ${isDocked ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
-      >
-        {columns.map((col, colIndex) => {
-          const cellId = `${originalIndex}-${col.key}`;
-          const hasError = !!errors[cellId];
-          const isCrosshairActive = features.showCrosshair && activeCoord?.row === originalIndex && activeCoord?.col === colIndex;
-          const isRowActive = features.showCrosshair && activeCoord?.row === originalIndex;
-          const isColActive = features.showCrosshair && activeCoord?.col === colIndex;
-          const isFixed = !!col.fixed;
+  const [dragState, setDragState] = useState<{ draggedId: string | null; targetId: string | null; position: 'before' | 'inside' | 'after' | null }>({ draggedId: null, targetId: null, position: null });
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-          let cellStateClasses = 'bg-transparent text-neutral-text'; 
-          
-          if (isCrosshairActive) {
-            cellStateClasses = '!bg-blue-100 ring-2 ring-inset ring-blue-600 z-20 font-bold !text-blue-900';
-          } else if (hasError) {
-            cellStateClasses = '!bg-red-50 border-2 !border-red-500 z-10';
-          } else if (isRowActive || isColActive) {
-            cellStateClasses = '!bg-blue-50 z-10';
-          } else if (isFixed) {
-            cellStateClasses = 'bg-white text-gray-800';
-          } else if (col.editable === false || col.type === 'readonly') {
-            cellStateClasses = 'bg-gray-50/70 text-gray-500';
-          }
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!activeCell) return;
+    const currentRecord = renderList[activeCell.row];
+    const currentId = String(currentRecord[rowKey] || (currentRecord as any)._originalId);
 
-          const fixedStyles = isFixed ? {
-            position: 'sticky' as const,
-            [col.fixed!]: 0,
-            zIndex: isCrosshairActive ? 25 : 15,
-            boxShadow: col.fixed === 'left' ? '2px 0 5px -2px rgba(0,0,0,0.1)' : '-2px 0 5px -2px rgba(0,0,0,0.1)',
-          } : {};
-
-          return (
-            <td 
-              key={col.key} 
-              data-row={originalIndex}
-              data-col={colIndex}
-              tabIndex={col.render ? -1 : 0}
-              onFocusCapture={() => setActiveCoord({ row: originalIndex, col: colIndex })}
-              onBlurCapture={() => setActiveCoord(null)}
-              className={`border-r border-neutral-border px-3 truncate relative outline-none ${cellStateClasses}`}
-              style={{ textAlign: col.align || 'center', ...fixedStyles }}
-            >
-              {hasError && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full transform translate-x-1/2 -translate-y-1/2 shadow-sm"></div>}
-              <div className="w-full h-full flex items-center justify-center">
-                {/* 核心修复：将 isCrosshairActive 传入业务层 */}
-                {col.render ? col.render(record, originalIndex, colIndex, isCrosshairActive || false) : (record as any)[col.key] || '-'}
-              </div>
-            </td>
-          );
-        })}
-      </tr>
-    );
+    switch (e.key) {
+      case 'ArrowUp': e.preventDefault(); setActiveCell(prev => ({ col: prev!.col, row: Math.max(0, prev!.row - 1) })); break;
+      case 'ArrowDown': e.preventDefault(); setActiveCell(prev => ({ col: prev!.col, row: Math.min(renderList.length - 1, prev!.row + 1) })); break;
+      case 'ArrowLeft': e.preventDefault(); setActiveCell(prev => ({ row: prev!.row, col: Math.max(0, prev!.col - 1) })); break;
+      case 'ArrowRight': e.preventDefault(); setActiveCell(prev => ({ row: prev!.row, col: Math.min(columns.length - 1, prev!.col + 1) })); break;
+      case ' ': 
+        e.preventDefault();
+        if (mode === 'tree' && activeCell.col === 1) toggleNode(currentId);
+        else handleSelectToggle(currentId);
+        break;
+    }
   };
 
   return (
-    <div className="w-full overflow-hidden bg-white border border-neutral-border rounded-md shadow-sm flex flex-col h-full">
-      <div className="flex-1 overflow-auto relative" onKeyDown={handleKeyDown}>
-        <table className="w-full text-sm font-tabular text-neutral-text border-collapse" style={{ tableLayout: 'fixed', minWidth: '100%' }}>
-          <thead className="bg-gray-50 sticky top-0 z-30 shadow-sm">
-            <tr className="text-neutral-title border-b border-neutral-divider h-10">
-              {columns.map((col, colIndex) => {
-                const isFixed = !!col.fixed;
-                const fixedStyles = isFixed ? {
-                  position: 'sticky' as const,
-                  [col.fixed!]: 0,
-                  zIndex: 35,
-                  boxShadow: col.fixed === 'left' ? '2px 0 5px -2px rgba(0,0,0,0.1)' : '-2px 0 5px -2px rgba(0,0,0,0.1)'
-                } : {};
-
-                return (
-                  <th 
-                    key={col.key} 
-                    className={`
-                      font-medium border-r border-neutral-border px-3 transition-colors bg-gray-50
-                      ${features.showCrosshair && activeCoord?.col === colIndex ? 'bg-primary-50/50 text-primary-600' : ''}
-                    `}
-                    style={{ width: col.width, textAlign: col.align || 'center', ...fixedStyles }}
-                  >
-                    {col.title}
-                  </th>
-                )
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {normalData.map((record) => {
-              const originalIndex = data.findIndex(r => getRowKey(r, 0) === getRowKey(record, 0));
-              return renderRow(record, originalIndex);
-            })}
-          </tbody>
-          {features.enableDock && dockedData.length > 0 && (
-            <tbody className="relative z-20">
-              <tr className="bg-gray-200 h-1.5">
-                <td colSpan={columns.length} className="p-0 border-t-2 border-b-2 border-gray-300"></td>
-              </tr>
-              {dockedData.map((record) => {
-                const originalIndex = data.findIndex(r => getRowKey(r, 0) === getRowKey(record, 0));
-                return renderRow(record, originalIndex, true);
-              })}
-            </tbody>
-          )}
-        </table>
-      </div>
+    <div className="w-full h-full outline-none flex flex-col" tabIndex={0} onKeyDown={handleKeyDown}>
+      <GridRenderEngine 
+        mode={mode}
+        renderList={renderList}
+        columns={columns.map(col => ({
+          ...col,
+          render: (record: T, rIdx: number, cIdx: number, isActive: boolean) => {
+            const id = String(record[rowKey] || (record as any)._originalId);
+            const { isSelected, isIndeterminate } = getSelectionState(record);
+            return col.render(record, {
+              rowIndex: rIdx, colIndex: cIdx, isActive, isSelected, isIndeterminate, mode,
+              toggleSelect: () => handleSelectToggle(id),
+              toggleExpand: () => toggleNode(id)
+            });
+          }
+        }))}
+        rowKey={rowKey}
+        activeCell={activeCell}
+        dragState={dragState}
+        onCellClick={(row, col) => setActiveCell({ row, col })}
+        onDragStart={(e, record) => {
+          if (mode !== 'tree') return;
+          const id = String(record[rowKey] || (record as any)._originalId);
+          e.dataTransfer.setData('nodeId', id);
+          // 🔥 修复：拖拽开始时收起当前节点
+          if ((record as any)._isExpanded) toggleNode(id);
+          setDragState({ draggedId: id, targetId: null, position: null });
+        }}
+        onDragOver={(e, record) => {
+          if (mode !== 'tree') return;
+          e.preventDefault();
+          const targetId = String(record[rowKey] || (record as any)._originalId);
+          const rect = e.currentTarget.getBoundingClientRect();
+          const y = e.clientY - rect.top;
+          const pos = y < rect.height * 0.25 ? 'before' : y > rect.height * 0.75 ? 'after' : 'inside';
+          
+          if (dragState.targetId !== targetId || dragState.position !== pos) {
+            setDragState({ draggedId: dragState.draggedId, targetId, position: pos as any });
+            
+            // 🔥 修复：悬停 1 秒展开目标节点
+            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+            if ((record as any)._hasChildren && !(record as any)._isExpanded) {
+              hoverTimerRef.current = setTimeout(() => {
+                toggleNode(targetId);
+                hoverTimerRef.current = null;
+              }, 1000);
+            }
+          }
+        }}
+        onDrop={(e, targetId) => {
+          if (mode !== 'tree') return;
+          if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+          const draggedId = e.dataTransfer.getData('nodeId');
+          onTreeDrop?.(draggedId, targetId, dragState.position as any);
+          setDragState({ draggedId: null, targetId: null, position: null });
+        }}
+      />
     </div>
   );
-};
+}
