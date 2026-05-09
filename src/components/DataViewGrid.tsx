@@ -13,11 +13,11 @@ interface InventoryViewRecord {
 
 export const DataViewGrid = () => {
   const [data] = useState<InventoryViewRecord[]>([
-    { id: 'R001', code: 'WE-001', name: 'Safe Box-Front', category: 'Hardware', bin: 'A-12-01', qty: 120, safetyStock: 50, status: 'healthy' },
-    { id: 'R002', code: 'WE-002', name: 'Safe Box-Back', category: 'Hardware', bin: 'A-12-02', qty: 8, safetyStock: 50, status: 'low' },
-    { id: 'R003', code: 'WE-003', name: 'Mainboard-V1', category: 'Electronics', bin: 'B-04-15', qty: 0, safetyStock: 20, status: 'out' },
-    { id: 'R004', code: 'WE-004', name: 'Mainboard-V2', category: 'Electronics', bin: 'B-04-16', qty: 0, safetyStock: 15, status: 'out' },
-    { id: 'R005', code: 'WE-005', name: 'Sensor Array', category: 'Sensors', bin: 'C-01-99', qty: 300, safetyStock: 100, status: 'healthy' },
+    { id: 'R001', code: 'B08F6B9GD1', name: 'Anker 10000mAh Power Bank', category: 'Electronics', bin: 'A-12-01', qty: 120, safetyStock: 50, status: 'healthy' },
+    { id: 'R002', code: 'B09J8P9A3D', name: 'Logitech MX Master 3S', category: 'Accessories', bin: 'A-12-02', qty: 8, safetyStock: 50, status: 'low' },
+    { id: 'R003', code: 'B07WNV5D6C', name: 'Apple AirPods Pro (2nd Gen)', category: 'Audio', bin: 'B-04-15', qty: 0, safetyStock: 20, status: 'out' },
+    { id: 'R004', code: 'B08N5M7S6Z', name: 'iPhone 15 Pro Case', category: 'Accessories', bin: 'B-04-16', qty: 0, safetyStock: 15, status: 'out' },
+    { id: 'R005', code: 'B01N5M7X8L', name: 'Ugreen USB-C Hub 6-in-1', category: 'Accessories', bin: 'C-01-99', qty: 300, safetyStock: 100, status: 'healthy' },
   ]);
 
   const [activeDockStatuses, setActiveDockStatuses] = useState<string[]>([]);

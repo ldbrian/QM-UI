@@ -108,10 +108,10 @@ const EditableCell = ({
 
 export const DataEntryGrid = () => {
   const [data, setData] = useState<InventoryRecord[]>([
-    { id: 'R001', code: 'WE-001', name: 'Safe Box-Front', qty: 12 },
-    { id: 'R002', code: 'WE-002', name: 'Safe Box-Back', qty: 5 },
-    { id: 'R003', code: 'WE-003', name: 'Mainboard-V1', qty: '23a' }, 
-    { id: 'R004', code: 'WE-004', name: 'Mainboard-V2', qty: 8 },
+    { id: 'R001', code: 'B08F6B9GD1', name: 'Anker 10000mAh Power Bank', qty: 120 },
+    { id: 'R002', code: 'B09J8P9A3D', name: 'Logitech MX Master 3S', qty: 45 },
+    { id: 'R003', code: 'B07WNV5D6C', name: 'Apple AirPods Pro (2nd Gen)', qty: '23a' }, // 故意留错，演示 Error Dock 拦截
+    { id: 'R004', code: 'B08N5M7S6Z', name: 'iPhone 15 Pro Silicone Case', qty: 85 },
   ]);
 
   const [errors, setErrors] = useState<Record<string, string>>({
